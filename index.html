@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PDF → Quiz PRO</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <!-- PDF.js -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.js"></script>
+  <!-- Tesseract.js (OCR) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:rgba(255,255,255,.06);
+      --stroke:rgba(255,255,255,.12);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.68);
+      --shadow:0 18px 50px rgba(0,0,0,.45);
+      --radius:22px;
+      --ok:#44ffb2;
+      --bad:#ff4678;
+      --blue:rgba(83,145,255,.22);
+      --blue2:rgba(83,145,255,.10);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Cairo",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(83,145,255,.18), transparent 60%),
+        radial-gradient(900px 500px at 80% 20%, rgba(255,70,120,.12), transparent 60%),
+        radial-gradient(700px 600px at 50% 90%, rgba(86,255,176,.10), transparent 60%),
+        linear-gradient(180deg, #070a14, #0b1020 55%, #070a14);
+      min-height:100vh;
+    }
+    .wrap{max-width:1120px;margin:0 auto;padding:28px 16px 44px}
+    header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+    h1{margin:0;font-size:clamp(22px,2.8vw,34px);font-weight:900}
+    p{margin:8px 0 0;color:var(--muted);line-height:1.7;font-size:14px}
+    .badge{
+      display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;
+      background:linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border:1px solid var(--stroke);box-shadow:0 10px 25px rgba(0,0,0,.25);color:var(--muted);
+      font-size:13px;white-space:nowrap
+    }
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 18px rgba(68,255,178,.55)}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:12px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
+    .card{
+      background:linear-gradient(180deg, var(--card), rgba(255,255,255,.04));
+      border:1px solid var(--stroke);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden
+    }
+    .head{padding:16px 16px 10px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .head h2{margin:0;font-size:16px;font-weight:900}
+    .body{padding:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:10px;
+      padding:10px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
+      background:linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      color:var(--text);cursor:pointer;user-select:none;transition:.18s ease;font-weight:900;font-size:13.5px;
+    }
+    .btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.24)}
+    .btn.primary{border-color:rgba(83,145,255,.38);background:linear-gradient(135deg, var(--blue), var(--blue2))}
+    .btn.danger{border-color:rgba(255,70,120,.40);background:linear-gradient(135deg, rgba(255,70,120,.18), rgba(255,70,120,.08))}
+    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    input[type="file"]{
+      width:100%;
+      padding:10px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.18);
+      color:var(--muted);
+    }
+    textarea{
+      width:100%;min-height:150px;resize:vertical;border-radius:18px;border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.18);color:var(--text);padding:14px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      line-height:1.7;outline:none
+    }
+    label{color:var(--muted);font-weight:900;font-size:13px}
+    input[type="number"], select{
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      outline:none;
+      font-family:inherit;
+      font-weight:900;
+    }
+    .box{
+      padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);
+      margin-top:12px
+    }
+    .box h3{margin:0 0 8px;font-size:14px;font-weight:900}
+    .hint{color:var(--muted);font-size:12.5px;line-height:1.7}
+    .ok{color:rgba(68,255,178,.95);font-weight:900}
+    .bad{color:rgba(255,70,120,.95);font-weight:900}
+    .q{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:14px;
+      margin:10px 0;
+      background:rgba(0,0,0,.14);
+    }
+    .q h4{margin:0 0 8px;font-size:14px}
+    .opt{display:flex;gap:10px;align-items:flex-start;margin:8px 0;padding:8px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+    .opt input{margin-top:4px}
+    .review{margin-top:8px;font-size:13px;line-height:1.8;color:var(--muted)}
+    .score{
+      padding:12px 14px;border-radius:18px;
+      border:1px solid rgba(83,145,255,.35);
+      background:linear-gradient(135deg, rgba(83,145,255,.22), rgba(83,145,255,.08));
+      font-weight:900;
+    }
+    .progress{
+      height:12px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);overflow:hidden
+    }
+    .bar{
+      height:100%;width:0%;
+      background:linear-gradient(90deg, rgba(68,255,178,.85), rgba(83,145,255,.85));
+      transition:width .2s ease
+    }
+    .historyItem{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      padding:10px 12px;
+      background:rgba(0,0,0,.14);
+      margin:8px 0;
+      font-size:13px;
+      line-height:1.7;
+      color:rgba(255,255,255,.82);
+    }
+    footer{margin-top:18px;color:rgba(255,255,255,.45);font-size:12px;text-align:center}
+    code.k{padding:2px 7px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);border-radius:10px}
+    canvas{max-width:100%;border-radius:16px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.2)}
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>PDF → Quiz PRO (Web تجربة)</h1>
+      <p>
+        يدعم PDF نصّي + OCR للـ Scan داخل المتصفح، وتصحيح وعلامة وسجل نتائج.
+      </p>
+    </div>
+    <div class="badge"><span class="dot"></span> PDF.js + Tesseract.js + LocalStorage</div>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <div class="head">
+        <h2>1) رفع PDF + استخراج النص</h2>
+        <span class="hint" id="status">—</span>
+      </div>
+      <div class="body">
+        <input id="pdfFile" type="file" accept="application/pdf" />
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" id="extractBtn">📄 استخراج نص (PDF)</button>
+          <button class="btn" id="ocrBtn" disabled>🖼️ OCR للـ Scan</button>
+          <button class="btn" id="demoBtn">🎲 نص تجريبي</button>
+          <button class="btn danger" id="resetBtn">🧹 مسح</button>
+        </div>
+
+        <div class="box">
+          <h3>تقدم OCR</h3>
+          <div class="progress"><div class="bar" id="ocrBar"></div></div>
+          <div class="hint" id="ocrHint" style="margin-top:8px">—</div>
+          <div class="hint" style="margin-top:6px">
+            OCR على الموبايل قد يكون بطيء. الأفضل تحدد عدد صفحات للـOCR.
+          </div>
+        </div>
+
+        <div class="box">
+          <h3>إعدادات OCR (للـ Scan)</h3>
+          <div class="row">
+            <label>من صفحة</label>
+            <input type="number" id="ocrFrom" min="1" value="1" style="width:90px">
+            <label>إلى صفحة</label>
+            <input type="number" id="ocrTo" min="1" value="2" style="width:90px">
+            <label>لغة OCR</label>
+            <select id="ocrLang">
+              <option value="ara" selected>Arabic (ara)</option>
+              <option value="eng">English (eng)</option>
+              <option value="ara+eng">Arabic+English</option>
+            </select>
+          </div>
+          <div class="hint" style="margin-top:8px">
+            ملاحظة: تحميل ملفات لغة OCR يتم تلقائياً وقد يحتاج نت أول مرة.
+          </div>
+        </div>
+
+        <div class="box">
+          <h3>النص المستخرج</h3>
+          <textarea id="text" placeholder="سيظهر هنا النص..."></textarea>
+        </div>
+
+        <div class="box">
+          <h3>معاينة صفحة (للتأكد)</h3>
+          <div class="row">
+            <label>صفحة:</label>
+            <input type="number" id="previewPage" min="1" value="1" style="width:90px">
+            <button class="btn" id="renderBtn">🧾 عرض</button>
+          </div>
+          <div style="margin-top:10px">
+            <canvas id="previewCanvas"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="head">
+        <h2>2) إعداد الاختبار + السجل</h2>
+        <span class="hint">توليد + تصحيح + حفظ</span>
+      </div>
+      <div class="body">
+        <div class="box">
+          <h3>نوع الأسئلة</h3>
+          <div class="row">
+            <label><input type="checkbox" id="tf" checked> صح/خطأ</label>
+            <label><input type="checkbox" id="mcq" checked> اختيار متعدد</label>
+            <label><input type="checkbox" id="write" checked> كتابة</label>
+          </div>
+        </div>
+
+        <div class="box">
+          <h3>عدد الأسئلة</h3>
+          <div class="row">
+            <label>صح/خطأ</label>
+            <input type="number" id="tfN" min="0" max="50" value="5">
+            <label>اختيار</label>
+            <input type="number" id="mcqN" min="0" max="50" value="5">
+            <label>كتابة</label>
+            <input type="number" id="wrN" min="0" max="20" value="3">
+          </div>
+          <div class="hint" style="margin-top:8px">
+            تصحيح الكتابة هنا ذكي محلياً: كلمات مفتاحية + تشابه نصي مع جملة من الدرس.
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" id="genBtn">🧠 توليد الأسئلة</button>
+          <button class="btn" id="startBtn" disabled>✅ بدء الاختبار</button>
+          <button class="btn danger" id="gradeBtn" disabled>🧾 تصحيح + حفظ</button>
+        </div>
+
+        <div class="box">
+          <h3>النتيجة</h3>
+          <div id="scoreBox" class="score">—</div>
+          <div class="hint" style="margin-top:8px" id="meta">—</div>
+        </div>
+
+        <div class="box">
+          <h3>سجل النتائج (آخر 10)</h3>
+          <div class="row">
+            <button class="btn" id="clearHistoryBtn">🧹 مسح السجل</button>
+          </div>
+          <div id="history" class="hint" style="margin-top:10px">—</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <div class="head">
+      <h2>3) الاختبار</h2>
+      <span class="hint">جاوب ثم اضغط تصحيح</span>
+    </div>
+    <div class="body">
+      <div id="quizArea" class="hint">ولّد الأسئلة أولاً.</div>
+    </div>
+  </section>
+
+  <footer>Dev : Ahmad Shami</footer>
+</div>
+
+<script>
+  // PDF.js worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.js";
+
+  const $ = (id)=>document.getElementById(id);
+
+  const statusEl = $('status');
+  const ocrBar = $('ocrBar');
+  const ocrHint = $('ocrHint');
+
+  const textEl = $('text');
+  const quizArea = $('quizArea');
+  const scoreBox = $('scoreBox');
+  const metaEl = $('meta');
+
+  const extractBtn = $('extractBtn');
+  const ocrBtn = $('ocrBtn');
+  const demoBtn = $('demoBtn');
+  const resetBtn = $('resetBtn');
+  const genBtn = $('genBtn');
+  const startBtn = $('startBtn');
+  const gradeBtn = $('gradeBtn');
+  const clearHistoryBtn = $('clearHistoryBtn');
+
+  const tfChk = $('tf');
+  const mcqChk = $('mcq');
+  const wrChk = $('write');
+
+  const tfN = $('tfN');
+  const mcqN = $('mcqN');
+  const wrN = $('wrN');
+
+  const ocrFrom = $('ocrFrom');
+  const ocrTo = $('ocrTo');
+  const ocrLang = $('ocrLang');
+
+  const previewPage = $('previewPage');
+  const renderBtn = $('renderBtn');
+  const previewCanvas = $('previewCanvas');
+  const historyEl = $('history');
+
+  let PDF_DOC = null;
+  let QUESTIONS = []; // unified list
+
+  function setStatus(msg, ok=true){
+    statusEl.textContent = msg;
+    statusEl.className = ok ? 'ok' : 'bad';
+  }
+  function setOCRProgress(pct, msg){
+    const v = Math.max(0, Math.min(100, pct));
+    ocrBar.style.width = v + "%";
+    ocrHint.textContent = msg || "—";
+  }
+
+  function resetAll(){
+    PDF_DOC = null;
+    textEl.value = "";
+    QUESTIONS = [];
+    quizArea.innerHTML = "ولّد الأسئلة أولاً.";
+    quizArea.className = "hint";
+    startBtn.disabled = true;
+    gradeBtn.disabled = true;
+    $('ocrBtn').disabled = true;
+    scoreBox.textContent = "—";
+    metaEl.textContent = "—";
+    setOCRProgress(0, "—");
+    setStatus("—", true);
+  }
+
+  function cleanText(s){
+    return (s || "")
+      .replace(/\u00AD/g, "")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  function splitSentencesAr(text){
+    let t = cleanText(text);
+    t = t.replace(/\s+/g, " ").trim();
+    let parts = t.split(/(?<=[\.\!\؟\?])\s+|[\n\r]+/g).map(x=>x.trim()).filter(x=>x.length >= 30);
+    if(parts.length < 8){
+      parts = t.split(/[،؛]/g).map(x=>x.trim()).filter(x=>x.length >= 30);
+    }
+    return parts.slice(0, 160);
+  }
+
+  function pickKeywords(text){
+    const stop = new Set(["من","في","على","إلى","عن","هذا","هذه","ذلك","تلك","هو","هي","هم","هن","و","أو","ثم","كما","لأن","حيث","عند","بعد","قبل","قد","تم","يتم","تكون","كان","كانت","يمكن","يعتبر","تعد","ضمن","مع","إذ","اذا","إذا","لا","لم","لن","كل","أي","أكثر","أقل"]);
+    const words = (text.match(/[\u0621-\u064A\w]{3,}/g) || []).map(w=>w.toLowerCase());
+    const freq = new Map();
+    for(const w0 of words){
+      const w = w0.trim();
+      if(stop.has(w)) continue;
+      freq.set(w, (freq.get(w) || 0) + 1);
+    }
+    const arr = [...freq.entries()].sort((a,b)=> (b[1]-a[1]) || (b[0].length - a[0].length));
+    return arr.slice(0, 100).map(x=>x[0]);
+  }
+
+  function shuffle(a){
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function escapeReg(s){
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function makeTF(sentences, n){
+    const out = [];
+    for(let i=0;i<Math.min(n, sentences.length);i++){
+      out.push({
+        type:'tf',
+        prompt: sentences[i],
+        correct: 'صح',
+        source: sentences[i]
+      });
+    }
+    for(let i=1;i<out.length;i+=2){
+      out[i].correct = 'خطأ';
+      out[i].prompt = "❌ " + out[i].prompt
+        .replace(/\bهو\b/g, "ليس")
+        .replace(/تزيد/g, "تتناقص")
+        .replace(/يؤدي/g, "لا يؤدي")
+        .replace(/يسبب/g, "لا يسبب");
+    }
+    while(out.length < n){
+      out.push({type:'tf', prompt:'❌ عبارة تجريبية خاطئة حول الدرس.', correct:'خطأ', source:''});
+    }
+    return out.slice(0,n);
+  }
+
+  function makeMCQ(text, keywords, n){
+    const sents = splitSentencesAr(text);
+    const out = [];
+    for(const s of sents){
+      if(out.length >= n) break;
+
+      let kw = null;
+      for(const k of keywords.slice(0, 45)){
+        if(s.toLowerCase().includes(k)){ kw = k; break; }
+      }
+      if(!kw) continue;
+
+      const masked = s.replace(new RegExp(escapeReg(kw), 'i'), "____");
+      if(masked === s) continue;
+
+      const distractors = keywords.filter(k=>k !== kw).slice(0, 30);
+      const choices = shuffle([kw, ...distractors.slice(0,3)]);
+      const correctIndex = choices.indexOf(kw);
+
+      out.push({
+        type:'mcq',
+        prompt: masked,
+        choices,
+        correct: correctIndex,
+        source: s
+      });
+    }
+    while(out.length < n){
+      const base = keywords.slice(0,4);
+      const choices = base.length === 4 ? base : ["أ","ب","ج","د"];
+      out.push({type:'mcq', prompt:'اختر المصطلح الأنسب: ____ من المفاهيم الأساسية.', choices, correct:0, source:''});
+    }
+    return out.slice(0,n);
+  }
+
+  function makeWrite(text, keywords, n){
+    const sents = splitSentencesAr(text);
+    const out = [];
+    for(const s of sents){
+      if(out.length >= n) break;
+      let kw = null;
+      for(const k of keywords.slice(0, 40)){
+        if(k.length >= 4 && s.toLowerCase().includes(k)){ kw = k; break; }
+      }
+      if(!kw) continue;
+
+      // نخزن reference sentence لنقارن معه (تشابه)
+      out.push({
+        type:'write',
+        prompt: `اشرح "${kw}" بإيجاز ثم اذكر مثالاً.`,
+        keywords: [kw],
+        reference: s,
+        source: s
+      });
+    }
+    while(out.length < n){
+      const k = (keywords[out.length] || "المفهوم");
+      out.push({type:'write', prompt:`اشرح "${k}" بإيجاز ثم اذكر مثالاً.`, keywords:[k], reference:"", source:''});
+    }
+    return out.slice(0,n);
+  }
+
+  // --- تشابه نصي بسيط (Cosine similarity على Bag-of-Words) ---
+  function tokenize(s){
+    return (s || "")
+      .toLowerCase()
+      .replace(/[^\u0621-\u064A\w\s]/g, " ")
+      .split(/\s+/)
+      .filter(x => x && x.length >= 3);
+  }
+  function vectorize(tokens){
+    const m = new Map();
+    for(const t of tokens){ m.set(t, (m.get(t)||0)+1); }
+    return m;
+  }
+  function cosineSim(a, b){
+    let dot = 0, na = 0, nb = 0;
+    for(const v of a.values()) na += v*v;
+    for(const v of b.values()) nb += v*v;
+    for(const [k, va] of a.entries()){
+      const vb = b.get(k) || 0;
+      dot += va * vb;
+    }
+    if(na === 0 || nb === 0) return 0;
+    return dot / (Math.sqrt(na)*Math.sqrt(nb));
+  }
+
+  function buildQuizUI(){
+    if(QUESTIONS.length === 0){
+      quizArea.className = "hint";
+      quizArea.textContent = "لا يوجد أسئلة.";
+      return;
+    }
+    quizArea.className = "";
+    quizArea.innerHTML = "";
+
+    QUESTIONS.forEach((q, idx)=>{
+      const div = document.createElement('div');
+      div.className = 'q';
+
+      const title = document.createElement('h4');
+      title.textContent = `${idx+1}) ${q.type === 'tf' ? 'صح/خطأ' : q.type === 'mcq' ? 'اختيار متعدد' : 'كتابة'}`;
+      div.appendChild(title);
+
+      const p = document.createElement('div');
+      p.style.lineHeight = "1.9";
+      p.textContent = q.prompt;
+      div.appendChild(p);
+
+      if(q.type === 'tf'){
+        div.appendChild(mkRadio(idx, 'صح', `${idx}`, 'صح'));
+        div.appendChild(mkRadio(idx, 'خطأ', `${idx}`, 'خطأ'));
+      }
+
+      if(q.type === 'mcq'){
+        q.choices.forEach((ch, i)=>{
+          div.appendChild(mkRadio(idx, String(i), `${idx}`, `${String.fromCharCode(65+i)}) ${ch}`));
+        });
+      }
+
+      if(q.type === 'write'){
+        const ta = document.createElement('textarea');
+        ta.id = `ans_${idx}`;
+        ta.placeholder = "اكتب إجابتك هنا...";
+        ta.style.minHeight = "110px";
+        div.appendChild(ta);
+
+        const hint = document.createElement('div');
+        hint.className = "hint";
+        hint.textContent = "التصحيح: كلمات مفتاحية + تشابه مع جملة من الدرس + طول الإجابة.";
+        div.appendChild(hint);
+      }
+
+      const rev = document.createElement('div');
+      rev.id = `rev_${idx}`;
+      rev.className = "review";
+      div.appendChild(rev);
+
+      quizArea.appendChild(div);
+    });
+  }
+
+  function mkRadio(qIndex, value, name, labelText){
+    const wrapper = document.createElement('label');
+    wrapper.className = 'opt';
+
+    const r = document.createElement('input');
+    r.type = "radio";
+    r.name = `q_${name}`;
+    r.value = value;
+
+    const span = document.createElement('div');
+    span.textContent = labelText;
+
+    wrapper.appendChild(r);
+    wrapper.appendChild(span);
+    return wrapper;
+  }
+
+  function gradeQuiz(){
+    let totalGradable = 0;
+    let got = 0;
+
+    QUESTIONS.forEach((q, idx)=>{
+      const rev = $(`rev_${idx}`);
+      rev.textContent = "";
+
+      if(q.type === 'tf'){
+        totalGradable += 1;
+        const chosen = document.querySelector(`input[name="q_${idx}"]:checked`);
+        if(!chosen){
+          rev.innerHTML = `<span class="bad">لم تجب.</span> الصحيح: <b>${q.correct}</b>`;
+        } else {
+          const ok = (chosen.value === q.correct);
+          if(ok) got += 1;
+          rev.innerHTML = ok ? `<span class="ok">✅ صحيح</span>` : `<span class="bad">❌ خطأ</span> الصحيح: <b>${q.correct}</b>`;
+        }
+      }
+
+      if(q.type === 'mcq'){
+        totalGradable += 1;
+        const chosen = document.querySelector(`input[name="q_${idx}"]:checked`);
+        const correctLabel = `${String.fromCharCode(65+q.correct)}) ${q.choices[q.correct]}`;
+        if(!chosen){
+          rev.innerHTML = `<span class="bad">لم تجب.</span> الصحيح: <b>${correctLabel}</b>`;
+        } else {
+          const chosenIdx = parseInt(chosen.value, 10);
+          const ok = (chosenIdx === q.correct);
+          if(ok) got += 1;
+          const chosenLabel = `${String.fromCharCode(65+chosenIdx)}) ${q.choices[chosenIdx]}`;
+          rev.innerHTML = ok
+            ? `<span class="ok">✅ صحيح</span>`
+            : `<span class="bad">❌ خطأ</span><br>اختيارك: <b>${chosenLabel}</b><br>الصحيح: <b>${correctLabel}</b>`;
+        }
+      }
+
+      if(q.type === 'write'){
+        totalGradable += 1;
+        const ans = ($(`ans_${idx}`)?.value || "").trim();
+        const ansLower = ans.toLowerCase();
+        const kws = (q.keywords || []).map(x=>x.toLowerCase());
+
+        const hasKeyword = kws.some(k=>ansLower.includes(k));
+        const longEnough = ans.length >= 25;
+
+        const ref = (q.reference || "");
+        const sim = cosineSim(vectorize(tokenize(ans)), vectorize(tokenize(ref)));
+
+        // نظام نقاط: (0..1) نوزنه
+        // كلمة مفتاحية 0.4 + طول 0.2 + تشابه 0.4
+        let s = 0;
+        s += hasKeyword ? 0.4 : 0;
+        s += longEnough ? 0.2 : 0;
+        s += Math.min(0.4, sim * 0.5); // sim 0..1 => up to 0.4
+
+        const ok = s >= 0.55; // حد النجاح
+        if(ok) got += 1;
+
+        rev.innerHTML =
+          (ok ? `<span class="ok">✅ مقبول</span>` : `<span class="bad">❌ ضعيف</span>`) +
+          `<br>نقاط: <b>${Math.round(s*100)}%</b> — كلمات مطلوبة: <b>${kws.join(", ")}</b>` +
+          `<br>تشابه مع الدرس: <b>${Math.round(sim*100)}%</b>` +
+          (ref ? `<div class="hint" style="margin-top:6px">مرجع من الدرس: ${ref.slice(0,200)}${ref.length>200?'…':''}</div>` : "");
+      }
+    });
+
+    const score = totalGradable ? Math.round((got / totalGradable) * 100) : 0;
+    scoreBox.textContent = `العلامة: ${score} / 100`;
+    metaEl.textContent = `الصحيح: ${got} / ${totalGradable} — (تصحيح كتابة: تشابه + كلمات + طول)`;
+    setStatus("تم التصحيح ✅", true);
+
+    saveAttempt(score, got, totalGradable, QUESTIONS.length);
+    renderHistory();
+  }
+
+  // --- History (LocalStorage) ---
+  const HIST_KEY = "pdfQuizProHistoryV1";
+  function loadHistory(){
+    try{
+      return JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
+    }catch{ return []; }
+  }
+  function saveAttempt(score, got, gradable, totalQ){
+    const hist = loadHistory();
+    hist.unshift({
+      at: new Date().toISOString(),
+      score, got, gradable, totalQ,
+      sample: (textEl.value || "").slice(0, 80)
+    });
+    localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, 10)));
+  }
+  function renderHistory(){
+    const hist = loadHistory();
+    if(!hist.length){
+      historyEl.className = "hint";
+      historyEl.textContent = "لا يوجد نتائج محفوظة بعد.";
+      return;
+    }
+    historyEl.className = "";
+    historyEl.innerHTML = hist.map(h=>{
+      const d = new Date(h.at);
+      return `
+        <div class="historyItem">
+          <b>${d.toLocaleString()}</b><br>
+          النتيجة: <b>${h.score}/100</b> — الصحيح: ${h.got}/${h.gradable} — مجموع الأسئلة: ${h.totalQ}<br>
+          <span class="hint">نص: ${escapeHtml(h.sample)}${h.sample.length>=80?'…':''}</span>
+        </div>
+      `;
+    }).join("");
+  }
+  function escapeHtml(s){
+    return (s||"").replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  clearHistoryBtn.addEventListener('click', ()=>{
+    localStorage.removeItem(HIST_KEY);
+    renderHistory();
+  });
+
+  // --- PDF operations ---
+  async function loadPDF(file){
+    const buf = await file.arrayBuffer();
+    PDF_DOC = await pdfjsLib.getDocument({ data: buf }).promise;
+    $('ocrBtn').disabled = false;
+    setStatus(`تم تحميل PDF ✅ (عدد الصفحات: ${PDF_DOC.numPages})`, true);
+    // set OCR page ranges defaults
+    ocrFrom.value = 1;
+    ocrTo.value = Math.min(2, PDF_DOC.numPages);
+    previewPage.value = 1;
+  }
+
+  async function extractPDFText(){
+    if(!PDF_DOC) throw new Error("No PDF loaded");
+    let full = "";
+    for(let i=1;i<=PDF_DOC.numPages;i++){
+      const page = await PDF_DOC.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map(it => it.str);
+      full += strings.join(" ") + "\n\n";
+    }
+    return cleanText(full);
+  }
+
+  async function renderPageToCanvas(pageNum, scale=1.5){
+    const page = await PDF_DOC.getPage(pageNum);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    return canvas;
+  }
+
+  async function previewRender(){
+    const p = parseInt(previewPage.value || "1", 10);
+    if(!PDF_DOC) return setStatus("حمّل PDF أولاً", false);
+    if(p < 1 || p > PDF_DOC.numPages) return setStatus("رقم صفحة غير صحيح", false);
+
+    setStatus("جاري عرض الصفحة…", true);
+    const c = await renderPageToCanvas(p, 1.2);
+    const ctx2 = previewCanvas.getContext('2d');
+    previewCanvas.width = c.width;
+    previewCanvas.height = c.height;
+    ctx2.drawImage(c, 0, 0);
+    setStatus("تم العرض ✅", true);
+  }
+
+  renderBtn.addEventListener('click', ()=>previewRender());
+
+  async function ocrPages(){
+    if(!PDF_DOC) throw new Error("No PDF loaded");
+
+    const from = Math.max(1, parseInt(ocrFrom.value || "1", 10));
+    const to = Math.min(PDF_DOC.numPages, parseInt(ocrTo.value || String(from), 10));
+    if(to < from) return setStatus("نطاق صفحات OCR غير صحيح", false);
+
+    const lang = ocrLang.value;
+
+    setOCRProgress(0, "بدء OCR…");
+    setStatus("OCR جاري…", true);
+
+    let out = "";
+    const total = (to - from + 1);
+    for(let i=0;i<total;i++){
+      const pageNum = from + i;
+
+      setOCRProgress(Math.round((i/total)*100), `تحضير صفحة ${pageNum}/${to}…`);
+      const c = await renderPageToCanvas(pageNum, 1.6);
+
+      setOCRProgress(Math.round((i/total)*100), `OCR صفحة ${pageNum}/${to}… (قد يأخذ وقت)`);
+      const r = await Tesseract.recognize(c, lang, {
+        logger: (m) => {
+          if(m.status === "recognizing text"){
+            const pct = Math.round(((i + (m.progress||0))/total)*100);
+            setOCRProgress(pct, `OCR صفحة ${pageNum}/${to}… ${Math.round((m.progress||0)*100)}%`);
+          }
+        }
+      });
+
+      out += (r.data.text || "") + "\n\n";
+    }
+
+    setOCRProgress(100, "انتهى OCR ✅");
+    setStatus("تم OCR ✅", true);
+
+    // append to existing text
+    const merged = cleanText((textEl.value || "") + "\n\n" + out);
+    textEl.value = merged;
+  }
+
+  // --- Buttons ---
+  extractBtn.addEventListener('click', async ()=>{
+    const f = $('pdfFile').files?.[0];
+    if(!f) return setStatus("اختر PDF أولاً", false);
+
+    try{
+      setStatus("تحميل PDF…", true);
+      await loadPDF(f);
+
+      setStatus("استخراج النص من PDF…", true);
+      const txt = await extractPDFText();
+      textEl.value = txt || "";
+
+      if(!txt || txt.length < 80){
+        setStatus("النص قليل جداً — غالباً PDF Scan. استخدم OCR 👇", false);
+      } else {
+        setStatus("تم استخراج النص ✅", true);
+      }
+      renderHistory();
+    } catch(e){
+      console.error(e);
+      setStatus("فشل. افتح الصفحة عبر http:// بدل file://", false);
+    }
+  });
+
+  ocrBtn.addEventListener('click', async ()=>{
+    if(!$('pdfFile').files?.[0]) return setStatus("اختر PDF أولاً", false);
+    try{
+      if(!PDF_DOC) await loadPDF($('pdfFile').files[0]);
+      await ocrPages();
+    } catch(e){
+      console.error(e);
+      setStatus("فشل OCR. جرّب صفحات أقل أو على كمبيوتر.", false);
+    }
+  });
+
+  demoBtn.addEventListener('click', ()=>{
+    textEl.value = cleanText(`
+الخلية هي الوحدة الأساسية في بناء الكائنات الحية ووظائفها. تتكون الخلية من غشاء خلوي يحيط بالسيتوبلازم ويحتوي على عضيات مختلفة.
+النواة تتحكم في أنشطة الخلية وتحتوي على المادة الوراثية. تقوم الميتوكوندريا بإنتاج الطاقة اللازمة للعمليات الحيوية.
+الانقسام المتساوي يؤدي إلى تكوين خليتين متماثلتين وراثياً، بينما الانقسام المنصف يؤدي إلى تكوين خلايا جنسية بنصف العدد الكروموسومي.
+التنفس الخلوي عملية يتم فيها تكسير الجلوكوز لإنتاج ATP. وتعتبر عملية البناء الضوئي مهمة لإنتاج الجلوكوز والأكسجين في النباتات.
+    `);
+    setStatus("تم إدخال نص تجريبي ✅", true);
+    renderHistory();
+  });
+
+  resetBtn.addEventListener('click', resetAll);
+
+  genBtn.addEventListener('click', ()=>{
+    const t = textEl.value.trim();
+    if(t.length < 150){
+      setStatus("النص قصير. استخرج PDF أو استخدم OCR أو ضع نص أطول.", false);
+      return;
+    }
+
+    const sentences = splitSentencesAr(t);
+    const keywords = pickKeywords(t);
+
+    const wantTF = tfChk.checked;
+    const wantMCQ = mcqChk.checked;
+    const wantWR = wrChk.checked;
+
+    const nTF = Math.max(0, Math.min(50, parseInt(tfN.value || "0", 10)));
+    const nMCQ = Math.max(0, Math.min(50, parseInt(mcqN.value || "0", 10)));
+    const nWR = Math.max(0, Math.min(20, parseInt(wrN.value || "0", 10)));
+
+    QUESTIONS = [];
+    if(wantTF && nTF>0) QUESTIONS.push(...makeTF(sentences, nTF));
+    if(wantMCQ && nMCQ>0) QUESTIONS.push(...makeMCQ(t, keywords, nMCQ));
+    if(wantWR && nWR>0) QUESTIONS.push(...makeWrite(t, keywords, nWR));
+
+    if(QUESTIONS.length === 0){
+      setStatus("اختر نوع أسئلة وعدد > 0", false);
+      return;
+    }
+
+    QUESTIONS = shuffle(QUESTIONS);
+    buildQuizUI();
+
+    startBtn.disabled = false;
+    gradeBtn.disabled = false;
+    scoreBox.textContent = "—";
+    metaEl.textContent = `تم توليد ${QUESTIONS.length} سؤال.`;
+    setStatus("تم توليد الأسئلة ✅", true);
+  });
+
+  startBtn.addEventListener('click', ()=>{
+    if(QUESTIONS.length === 0) return;
+    quizArea.scrollIntoView({behavior:'smooth', block:'start'});
+    setStatus("ابدأ بالحل ثم اضغط تصحيح", true);
+  });
+
+  gradeBtn.addEventListener('click', ()=>{
+    if(QUESTIONS.length === 0) return;
+    gradeQuiz();
+  });
+
+  // when user selects file, load pdf (optional)
+  $('pdfFile').addEventListener('change', async ()=>{
+    const f = $('pdfFile').files?.[0];
+    if(!f) return;
+    try{
+      await loadPDF(f);
+      renderHistory();
+    } catch(e){
+      console.error(e);
+      setStatus("تعذر تحميل PDF", false);
+    }
+  });
+
+  // init
+  resetAll();
+  renderHistory();
+</script>
+</body>
+</html>
