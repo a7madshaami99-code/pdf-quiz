@@ -3,17 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PDF → Text (Local PDF.js) | Dev : Ahmad Shami</title>
+  <title>PDF → Quiz (Local) | Dev : Ahmad Shami</title>
 
   <!-- ✅ Local PDF.js (NO CDN) -->
   <script src="./vendor/pdfjs/pdf.min.js"></script>
 
   <style>
     :root{
-      --bg:#0b1020; --card:rgba(255,255,255,.06); --card2:rgba(255,255,255,.09);
-      --txt:#eaf0ff; --muted:rgba(234,240,255,.7);
-      --good:#28d17c; --bad:#ff4d6d; --btn:#2d6cdf; --btn2:#1b2446;
-      --bd:rgba(255,255,255,.12);
+      --bg:#0b1020; --card:rgba(255,255,255,.06); --txt:#eaf0ff; --muted:rgba(234,240,255,.7);
+      --good:#28d17c; --bad:#ff4d6d; --bd:rgba(255,255,255,.12);
+      --btn:#2d6cdf; --btn2:#1b2446;
     }
     *{box-sizing:border-box}
     body{
@@ -22,88 +21,71 @@
                   radial-gradient(900px 700px at 80% 20%, #b21f1f26, transparent),
                   radial-gradient(900px 700px at 50% 90%, #fdbb2d14, transparent),
                   var(--bg);
-      color:var(--txt);
-      padding:18px;
+      color:var(--txt); padding:18px;
     }
-    .wrap{max-width:980px;margin:0 auto}
+    .wrap{max-width:1020px;margin:0 auto}
     .top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
     h1{font-size:18px;margin:0}
     .pill{padding:7px 10px;border:1px solid var(--bd);border-radius:999px;background:rgba(0,0,0,.15);color:var(--muted);font-size:12px}
     .card{
-      margin-top:14px;
-      border:1px solid var(--bd);
+      margin-top:14px;border:1px solid var(--bd);
       background:linear-gradient(180deg,var(--card),rgba(0,0,0,.15));
-      border-radius:16px;
-      padding:14px;
-      box-shadow:0 10px 30px rgba(0,0,0,.35);
+      border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);
     }
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
     .row > *{flex:1}
     .btn{
       border:1px solid var(--bd);
       background:linear-gradient(180deg,rgba(45,108,223,.95),rgba(30,78,170,.85));
-      color:white;
-      padding:12px 14px;border-radius:14px;
-      font-weight:700;
-      cursor:pointer;
-      min-width:180px;
+      color:white;padding:12px 14px;border-radius:14px;font-weight:800;cursor:pointer;min-width:180px;
     }
-    .btn:disabled{opacity:.5;cursor:not-allowed}
     .btn.secondary{background:linear-gradient(180deg,rgba(27,36,70,.95),rgba(20,26,50,.9))}
-    input[type="file"]{
-      width:100%;
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px dashed var(--bd);
-      background:rgba(0,0,0,.18);
-      color:var(--muted);
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    input[type="file"], input[type="number"], select{
+      width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--bd);
+      background:rgba(0,0,0,.18);color:var(--txt);outline:none;
     }
-    .status{
-      margin-top:10px;
-      padding:10px 12px;border-radius:12px;border:1px solid var(--bd);
-      background:rgba(0,0,0,.18);
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.6;
-    }
+    input[type="file"]{border-style:dashed;color:var(--muted)}
+    .status{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--bd);
+      background:rgba(0,0,0,.18);color:var(--muted);font-size:13px;line-height:1.6;white-space:pre-wrap}
     .status.good{border-color:rgba(40,209,124,.5); color:#bff8dc}
     .status.bad{border-color:rgba(255,77,109,.5); color:#ffd1db}
     textarea{
-      width:100%;
-      min-height:220px;
-      resize:vertical;
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px solid var(--bd);
-      background:rgba(0,0,0,.18);
-      color:var(--txt);
-      outline:none;
-      line-height:1.7;
-      font-size:14px;
+      width:100%;min-height:170px;resize:vertical;padding:12px 14px;border-radius:14px;border:1px solid var(--bd);
+      background:rgba(0,0,0,.18);color:var(--txt);outline:none;line-height:1.7;font-size:14px;
     }
-    .small{color:var(--muted);font-size:12px;margin-top:8px}
+    .small{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.7}
+    .grid{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:860px){ .grid{grid-template-columns:1fr 1fr} }
+    .q{
+      border:1px solid var(--bd); background:rgba(0,0,0,.18); border-radius:14px; padding:12px;
+    }
+    .q h3{margin:0 0 10px 0;font-size:14px}
+    .opt{display:flex;gap:10px;align-items:center;margin:6px 0}
+    .opt input{width:auto}
+    .resultBox{margin-top:10px;padding:12px;border-radius:14px;border:1px solid var(--bd);background:rgba(0,0,0,.18)}
+    .ok{color:#bff8dc}
+    .no{color:#ffd1db}
     .footer{margin-top:14px;color:var(--muted);text-align:center;font-size:12px}
-    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; background:rgba(255,255,255,.08); padding:2px 6px; border-radius:8px; border:1px solid var(--bd)}
   </style>
 </head>
 
 <body>
 <div class="wrap">
   <div class="top">
-    <h1>تحويل PDF إلى نص (بدون CDN) — PDF.js محلي</h1>
-    <div class="pill" id="libPill">جارٍ فحص المكتبات…</div>
+    <h1>PDF → Quiz PRO (تجربة محلية)</h1>
+    <div class="pill" id="libPill">جارٍ الفحص…</div>
   </div>
 
   <div class="card">
     <div class="row">
       <div>
-        <label class="small">1) اختر ملف PDF</label>
+        <div class="small">1) اختر ملف PDF (نصّي وليس Scan للحصول على أفضل نتائج)</div>
         <input id="pdfFile" type="file" accept="application/pdf" />
-        <div class="small">مهم: لازم يكون عندك بالريبو <span class="kbd">vendor/pdfjs/pdf.min.js</span> و <span class="kbd">vendor/pdfjs/pdf.worker.min.js</span></div>
+        <div class="small">لازم يكون موجود: <b>vendor/pdfjs/pdf.min.js</b> و <b>vendor/pdfjs/pdf.worker.min.js</b></div>
       </div>
 
-      <div style="min-width:220px">
-        <label class="small">&nbsp;</label>
+      <div style="min-width:240px">
         <button class="btn" id="extractBtn" disabled>📄 استخراج النص (PDF)</button>
         <button class="btn secondary" id="clearBtn">🧹 مسح</button>
       </div>
@@ -112,12 +94,53 @@
     <div class="status" id="status">اختر ملف PDF أولاً.</div>
 
     <div style="margin-top:12px">
-      <label class="small">النص المستخرج</label>
+      <div class="small">النص المستخرج</div>
       <textarea id="out" placeholder="سيظهر النص هنا…"></textarea>
-      <div class="small">إذا كان ملفك Scan (صور داخل PDF) لن يظهر نص هنا — عندها نحتاج OCR (نضيفه لاحقاً محلي).</div>
+      <div class="small">إذا كان PDF Scan (صور) لازم OCR (نضيفه لاحقاً محلي أو بسيرفر).</div>
     </div>
+  </div>
 
-    <div class="footer">Dev : Ahmad Shami</div>
+  <div class="card">
+    <div class="grid">
+      <div>
+        <div class="small">2) إعداد الاختبار</div>
+        <div class="row">
+          <div>
+            <label class="small">صح/خطأ</label>
+            <input id="nTF" type="number" min="0" max="30" value="5">
+          </div>
+          <div>
+            <label class="small">اختيار متعدد</label>
+            <input id="nMCQ" type="number" min="0" max="30" value="5">
+          </div>
+          <div>
+            <label class="small">أسئلة شرح</label>
+            <input id="nSA" type="number" min="0" max="20" value="3">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="genBtn">✨ توليد الأسئلة</button>
+          <button class="btn secondary" id="gradeBtn" disabled>✅ تصحيح + علامة /100</button>
+        </div>
+
+        <div class="small">
+          * هذا مولّد محلي (بدون AI) يعتمد على النص: يقسمه لجمل ويختار كلمات مفتاحية ويعمل أسئلة تلقائياً.<br>
+          * النتائج تتحسن لما يكون النص مرتب وواضح.
+        </div>
+      </div>
+
+      <div>
+        <div class="small">النتيجة</div>
+        <div class="resultBox" id="scoreBox">—</div>
+        <div class="footer">Dev : Ahmad Shami</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="quizCard" style="display:none">
+    <div class="small">3) الاختبار</div>
+    <div id="quiz"></div>
   </div>
 </div>
 
@@ -125,14 +148,24 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  const pdfFile   = $("pdfFile");
-  const extractBtn= $("extractBtn");
-  const clearBtn  = $("clearBtn");
-  const statusEl  = $("status");
-  const outEl     = $("out");
-  const libPill   = $("libPill");
+  const pdfFile = $("pdfFile");
+  const extractBtn = $("extractBtn");
+  const clearBtn = $("clearBtn");
+  const statusEl = $("status");
+  const outEl = $("out");
+  const libPill = $("libPill");
+
+  const nTF = $("nTF");
+  const nMCQ = $("nMCQ");
+  const nSA = $("nSA");
+  const genBtn = $("genBtn");
+  const gradeBtn = $("gradeBtn");
+  const quizCard = $("quizCard");
+  const quizEl = $("quiz");
+  const scoreBox = $("scoreBox");
 
   let PDF_DOC = null;
+  let quizModel = []; // {type, q, options?, answer, user?}
 
   function setStatus(msg, ok=null){
     statusEl.textContent = msg;
@@ -140,34 +173,21 @@
     if(ok === true) statusEl.classList.add("good");
     if(ok === false) statusEl.classList.add("bad");
   }
-
   function setLibPill(text, ok){
     libPill.textContent = text;
     libPill.style.borderColor = ok ? "rgba(40,209,124,.6)" : "rgba(255,77,109,.6)";
     libPill.style.color = ok ? "#bff8dc" : "#ffd1db";
   }
 
-  // ✅ Check pdfjsLib exists (loaded locally)
+  // ---- PDF.js local check
   if(typeof window.pdfjsLib === "undefined"){
     setLibPill("PDF.js غير محمّل ❌", false);
-    setStatus(
-      "تعذر تحميل PDF.js محلياً. تأكد أن الملفات موجودة بالضبط:\n" +
-      "vendor/pdfjs/pdf.min.js\nvendor/pdfjs/pdf.worker.min.js",
-      false
-    );
+    setStatus("تعذر تحميل PDF.js محلياً. تأكد من وجود:\nvendor/pdfjs/pdf.min.js\nvendor/pdfjs/pdf.worker.min.js", false);
     return;
-  } else {
-    setLibPill("PDF.js محلي جاهز ✅", true);
   }
+  setLibPill("PDF.js محلي جاهز ✅", true);
 
-  // ✅ Set worker locally (NO CDN)
-  try{
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "./vendor/pdfjs/pdf.worker.min.js";
-  }catch(e){
-    console.error(e);
-    setStatus("فشل إعداد PDF worker محلياً. تأكد من مسار pdf.worker.min.js", false);
-    return;
-  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "./vendor/pdfjs/pdf.worker.min.js";
 
   async function loadPDF(file){
     const ab = await file.arrayBuffer();
@@ -177,7 +197,7 @@
   }
 
   async function extractTextFromPDF(){
-    if(!PDF_DOC) throw new Error("لم يتم تحميل PDF بعد.");
+    if(!PDF_DOC) throw new Error("No PDF loaded");
     const total = PDF_DOC.numPages;
     let all = "";
     for(let p=1; p<=total; p++){
@@ -190,18 +210,246 @@
     return all.trim();
   }
 
+  // ---- Local quiz generator (no AI)
+  function normalizeText(t){
+    return (t||"")
+      .replace(/\s+/g," ")
+      .replace(/[“”]/g,'"')
+      .replace(/[’]/g,"'")
+      .trim();
+  }
+
+  function splitSentences(t){
+    // works for Arabic/English mixed
+    const raw = t
+      .replace(/\n+/g," ")
+      .replace(/\s+/g," ")
+      .trim();
+    const parts = raw.split(/(?<=[\.\!\?؟؛:])\s+/);
+    return parts.map(s=>s.trim()).filter(s=>s.length>=35); // avoid tiny fragments
+  }
+
+  function pickKeywords(sentence){
+    // pick "interesting" tokens: long words, latin terms, uppercase-ish, or words with hyphen
+    const toks = sentence
+      .replace(/[(){}\[\]،,]/g," ")
+      .split(/\s+/)
+      .map(w=>w.trim())
+      .filter(w=>w.length>=4);
+
+    const candidates = [];
+    for(const w of toks){
+      const isLatin = /[A-Za-z]/.test(w);
+      const isLong = w.length>=7;
+      const hasDash = /-/.test(w);
+      if(isLatin || isLong || hasDash) candidates.push(w.replace(/[^\w\u0600-\u06FF-]/g,""));
+    }
+    // unique
+    return [...new Set(candidates)].slice(0, 8);
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function makeTF(sentences, n){
+    const chosen = shuffle(sentences).slice(0, n);
+    return chosen.map((s, idx)=>{
+      // 50% make false by removing/altering a keyword
+      const kws = pickKeywords(s);
+      let q = s;
+      let ans = "صح";
+      if(kws.length>=1 && Math.random()<0.5){
+        ans = "خطأ";
+        const k = kws[Math.floor(Math.random()*kws.length)];
+        // replace keyword with something wrong-ish
+        q = s.replace(k, k.split("").reverse().join("")); // simple wrong token
+      }
+      return { type:"TF", q:`(${idx+1}) ${q}`, options:["صح","خطأ"], answer:ans };
+    });
+  }
+
+  function makeMCQ(sentences, n){
+    const poolK = sentences.flatMap(s=>pickKeywords(s));
+    const uniqPool = [...new Set(poolK)].filter(x=>x && x.length>=4);
+    const chosenS = shuffle(sentences).slice(0, n);
+
+    const items = [];
+    for(let i=0;i<chosenS.length;i++){
+      const s = chosenS[i];
+      const kws = pickKeywords(s);
+      if(kws.length===0) continue;
+
+      const answer = kws[0];
+      let stem = s;
+      // blank the answer
+      stem = stem.replace(answer, "_____");
+      // build distractors from pool
+      const distractors = shuffle(uniqPool.filter(k=>k!==answer)).slice(0, 3);
+      const options = shuffle([answer, ...distractors]);
+      items.push({ type:"MCQ", q:`(${items.length+1}) اختر الكلمة المناسبة: ${stem}`, options, answer });
+      if(items.length>=n) break;
+    }
+    return items;
+  }
+
+  function makeSA(sentences, n){
+    const chosen = shuffle(sentences).slice(0, n);
+    return chosen.map((s, idx)=>{
+      const kws = pickKeywords(s).slice(0, 3);
+      const hint = kws.length ? ` (كلمات مفتاحية: ${kws.join("، ")})` : "";
+      return {
+        type:"SA",
+        q:`(${idx+1}) اشرح باختصار الفكرة التالية من النص:${hint}\n${s}`,
+        // expected answer: keywords (we grade by keyword match)
+        answer: kws
+      };
+    });
+  }
+
+  function buildQuizUI(model){
+    quizEl.innerHTML = "";
+    quizCard.style.display = "block";
+    scoreBox.textContent = "—";
+    gradeBtn.disabled = false;
+
+    const sections = [
+      {key:"TF", title:"صح / خطأ"},
+      {key:"MCQ", title:"اختيار من متعدد"},
+      {key:"SA", title:"أسئلة شرح"},
+    ];
+
+    for(const sec of sections){
+      const secItems = model.filter(x=>x.type===sec.key);
+      if(!secItems.length) continue;
+
+      const header = document.createElement("div");
+      header.className = "small";
+      header.style.margin = "10px 0";
+      header.innerHTML = `<b>${sec.title}</b>`;
+      quizEl.appendChild(header);
+
+      secItems.forEach((item, idx)=>{
+        const box = document.createElement("div");
+        box.className = "q";
+
+        const h = document.createElement("h3");
+        h.textContent = item.q;
+        box.appendChild(h);
+
+        if(item.type === "TF" || item.type === "MCQ"){
+          const name = `q_${sec.key}_${idx}`;
+          item.options.forEach(opt=>{
+            const line = document.createElement("label");
+            line.className = "opt";
+            line.innerHTML = `<input type="radio" name="${name}" value="${opt}"><span>${opt}</span>`;
+            box.appendChild(line);
+          });
+        } else if(item.type === "SA"){
+          const ta = document.createElement("textarea");
+          ta.placeholder = "اكتب إجابتك هنا…";
+          ta.style.minHeight = "120px";
+          ta.dataset.sa = "1";
+          box.appendChild(ta);
+          const sm = document.createElement("div");
+          sm.className = "small";
+          sm.textContent = "التصحيح هنا يعتمد على مطابقة الكلمات المفتاحية (محلي).";
+          box.appendChild(sm);
+        }
+
+        quizEl.appendChild(box);
+      });
+    }
+  }
+
+  function gradeQuiz(){
+    // scoring weights
+    const tfItems = quizModel.filter(x=>x.type==="TF");
+    const mcqItems = quizModel.filter(x=>x.type==="MCQ");
+    const saItems = quizModel.filter(x=>x.type==="SA");
+
+    const totalQuestions = tfItems.length + mcqItems.length + saItems.length;
+    if(totalQuestions === 0){
+      scoreBox.textContent = "لا يوجد أسئلة للتصحيح.";
+      return;
+    }
+
+    // weights: TF 30%, MCQ 40%, SA 30% distributed
+    const wTF = tfItems.length ? 30/tfItems.length : 0;
+    const wMCQ = mcqItems.length ? 40/mcqItems.length : 0;
+    const wSA = saItems.length ? 30/saItems.length : 0;
+
+    let score = 0;
+    let report = [];
+
+    // collect user answers from DOM by order
+    const qBoxes = [...quizEl.querySelectorAll(".q")];
+    let tfIndex=0, mcqIndex=0, saIndex=0;
+
+    for(const box of qBoxes){
+      // find which model item it corresponds to by scanning text prefix
+      const text = box.querySelector("h3")?.textContent || "";
+
+      if(text.includes("صح") && (box.querySelector('input[type="radio"]')) && tfIndex < tfItems.length){
+        const name = box.querySelector('input[type="radio"]')?.name;
+        const chosen = quizEl.querySelector(`input[name="${name}"]:checked`)?.value || "";
+        const correct = tfItems[tfIndex].answer;
+        const ok = chosen === correct;
+        if(ok) score += wTF;
+        report.push(`${ok?"✅":"❌"} صح/خطأ: جوابك (${chosen||"—"}) | الصحيح (${correct})`);
+        tfIndex++;
+        continue;
+      }
+
+      if(text.includes("اختر الكلمة المناسبة") && (box.querySelector('input[type="radio"]')) && mcqIndex < mcqItems.length){
+        const name = box.querySelector('input[type="radio"]')?.name;
+        const chosen = quizEl.querySelector(`input[name="${name}"]:checked`)?.value || "";
+        const correct = mcqItems[mcqIndex].answer;
+        const ok = chosen === correct;
+        if(ok) score += wMCQ;
+        report.push(`${ok?"✅":"❌"} اختيار: جوابك (${chosen||"—"}) | الصحيح (${correct})`);
+        mcqIndex++;
+        continue;
+      }
+
+      if(box.querySelector("textarea") && saIndex < saItems.length){
+        const user = normalizeText(box.querySelector("textarea").value);
+        const keys = saItems[saIndex].answer || [];
+        let hit = 0;
+        for(const k of keys){
+          if(k && user.toLowerCase().includes(k.toLowerCase())) hit++;
+        }
+        const ratio = keys.length ? (hit/keys.length) : 0;
+        const got = wSA * ratio;
+        score += got;
+        report.push(`${ratio>=0.67?"✅":"❌"} شرح: تطابق كلمات مفتاحية ${hit}/${keys.length} (+${got.toFixed(1)})`);
+        saIndex++;
+        continue;
+      }
+    }
+
+    score = Math.max(0, Math.min(100, Math.round(score)));
+    scoreBox.innerHTML = `<div style="font-size:18px;font-weight:900;margin-bottom:8px">علامتك: ${score} / 100</div>
+                          <div class="small">${report.join("<br>")}</div>`;
+  }
+
+  // Events
   pdfFile.addEventListener("change", async () => {
     const f = pdfFile.files && pdfFile.files[0];
     PDF_DOC = null;
-    outEl.value = "";
     extractBtn.disabled = true;
+    outEl.value = "";
+    setStatus("جارٍ التحضير…", true);
 
     if(!f){
       setStatus("اختر ملف PDF أولاً.", null);
       return;
     }
-
-    setStatus("جارٍ تحميل PDF…", true);
     try{
       await loadPDF(f);
       extractBtn.disabled = false;
@@ -213,25 +461,44 @@
   });
 
   extractBtn.addEventListener("click", async () => {
-    if(!PDF_DOC){
-      setStatus("اختَر ملف PDF أولاً.", false);
-      return;
-    }
+    if(!PDF_DOC){ setStatus("اختَر ملف PDF أولاً.", false); return; }
     extractBtn.disabled = true;
     try{
       const text = await extractTextFromPDF();
       outEl.value = text || "";
-      if(!text){
-        setStatus("تمت المعالجة لكن لم يتم العثور على نص. غالباً هذا PDF Scan ويحتاج OCR.", false);
-      }else{
-        setStatus("تم استخراج النص ✅", true);
-      }
+      if(!text) setStatus("لم يتم العثور على نص. هذا غالباً PDF Scan ويحتاج OCR.", false);
+      else setStatus("تم استخراج النص ✅", true);
     }catch(e){
       console.error(e);
-      setStatus("صار خطأ أثناء استخراج النص. افتح Console للتفاصيل.", false);
+      setStatus("صار خطأ أثناء استخراج النص.", false);
     }finally{
       extractBtn.disabled = false;
     }
+  });
+
+  genBtn.addEventListener("click", () => {
+    const text = normalizeText(outEl.value);
+    if(text.length < 120){
+      setStatus("النص قصير جداً. استخرج نص PDF أولاً (أو الصق نص أطول).", false);
+      return;
+    }
+    const sents = splitSentences(text);
+    if(sents.length < 3){
+      setStatus("ما قدرت قسم النص لجمل كافية. جرّب نص أوضح/أطول.", false);
+      return;
+    }
+
+    const tf = makeTF(sents, Number(nTF.value||0));
+    const mcq = makeMCQ(sents, Number(nMCQ.value||0));
+    const sa = makeSA(sents, Number(nSA.value||0));
+
+    quizModel = [...tf, ...mcq, ...sa];
+    buildQuizUI(quizModel);
+    setStatus(`تم توليد ${tf.length} صح/خطأ، ${mcq.length} اختيار، ${sa.length} شرح ✅`, true);
+  });
+
+  gradeBtn.addEventListener("click", () => {
+    gradeQuiz();
   });
 
   clearBtn.addEventListener("click", () => {
@@ -239,9 +506,16 @@
     pdfFile.value = "";
     PDF_DOC = null;
     extractBtn.disabled = true;
-    setStatus("تم المسح. اختر ملف PDF جديد.", null);
+    quizModel = [];
+    quizEl.innerHTML = "";
+    quizCard.style.display = "none";
+    gradeBtn.disabled = true;
+    scoreBox.textContent = "—";
+    setStatus("تم المسح. اختر PDF جديد.", null);
   });
 
+  // init
+  gradeBtn.disabled = true;
 })();
 </script>
 </body>
