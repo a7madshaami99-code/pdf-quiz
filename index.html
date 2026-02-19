@@ -3,13 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF Quiz Generator</title>
+<title>Smart PDF Quiz | Dev : Ahmad Shami</title>
 
-<!-- ✅ PDF.js محلي بدل CDN -->
+<!-- PDF.js محلي -->
 <script src="./vendor/pdfjs/pdf.min.js"></script>
-
-<!-- Tesseract (بقي كما هو - إذا لاحقاً حجبته الشبكة منخليه محلي) -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <style>
 body{
@@ -24,9 +21,11 @@ button{
   border:none;
   border-radius:8px;
   cursor:pointer;
+  font-weight:bold;
 }
 .primary{background:#2563eb;color:white;}
 .secondary{background:#475569;color:white;}
+.success{background:#16a34a;color:white;}
 textarea{
   width:100%;
   min-height:150px;
@@ -47,14 +46,16 @@ textarea{
 
 <body>
 
-<h2>تحويل PDF إلى اختبار</h2>
+<h2>تحويل PDF إلى اختبار ذكي</h2>
 
 <input type="file" id="pdfFile" accept="application/pdf">
-<button class="primary" id="extractBtn">استخراج النص</button>
-<button class="secondary" id="generateBtn">توليد اختبار</button>
-<button class="secondary" id="gradeBtn">تصحيح</button>
+<br>
+<button class="primary" id="extractBtn">📄 استخراج النص</button>
+<button class="secondary" id="generateBtn">✨ توليد اختبار</button>
+<button class="secondary" id="regenBtn">🔄 إعادة توليد</button>
+<button class="success" id="gradeBtn">✅ تصحيح</button>
 
-<textarea id="outputText" placeholder="النص المستخرج..."></textarea>
+<textarea id="outputText" placeholder="النص المستخرج يظهر هنا..."></textarea>
 
 <div id="quizContainer" class="quiz-box"></div>
 <div id="result"></div>
@@ -62,11 +63,12 @@ textarea{
 <script>
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "./vendor/pdfjs/pdf.worker.min.js"; // ✅ محلي بدل CDN
+  "./vendor/pdfjs/pdf.worker.min.js";
 
 const pdfInput = document.getElementById("pdfFile");
 const extractBtn = document.getElementById("extractBtn");
 const generateBtn = document.getElementById("generateBtn");
+const regenBtn = document.getElementById("regenBtn");
 const gradeBtn = document.getElementById("gradeBtn");
 const outputText = document.getElementById("outputText");
 const quizContainer = document.getElementById("quizContainer");
@@ -74,6 +76,27 @@ const resultDiv = document.getElementById("result");
 
 let extractedText = "";
 let questions = [];
+
+function cleanText(t){
+  return (t||"").replace(/\s+/g," ").trim();
+}
+
+function splitSentences(t){
+  return cleanText(t)
+    .split(/(?<=[\.\!\?؟؛:])\s+/)
+    .filter(s=>s.length > 50);
+}
+
+function extractTerms(text){
+  return [...new Set(
+    text.split(/\s+/)
+      .filter(w => w.length >= 7 || /[A-Za-z]/.test(w))
+  )].slice(0,50);
+}
+
+function shuffle(arr){
+  return arr.sort(()=>Math.random()-0.5);
+}
 
 extractBtn.onclick = async () => {
   const file = pdfInput.files[0];
@@ -98,48 +121,101 @@ extractBtn.onclick = async () => {
   reader.readAsArrayBuffer(file);
 };
 
-generateBtn.onclick = () => {
+function generateQuiz(){
+  if (!extractedText) {
+    extractedText = outputText.value;
+  }
   if (!extractedText) return alert("استخرج النص أولاً");
 
   quizContainer.innerHTML = "";
   resultDiv.innerHTML = "";
   questions = [];
 
-  const sentences = extractedText.split(".").filter(s => s.length > 40).slice(0,5);
+  const sentences = splitSentences(extractedText);
+  const terms = extractTerms(extractedText);
 
-  sentences.forEach((s, index) => {
-    const q = {
-      question: s.trim(),
-      answer: "صح"
-    };
-    questions.push(q);
+  const picked = shuffle(sentences).slice(0,5);
 
+  // صح/خطأ
+  picked.forEach((s, i)=>{
+    questions.push({
+      type:"TF",
+      question:s,
+      answer:"صح"
+    });
+  });
+
+  // اختيار متعدد
+  for(let i=0;i<5;i++){
+    const term = terms[i];
+    if(!term) continue;
+
+    const sentence = sentences.find(s=>s.includes(term));
+    if(!sentence) continue;
+
+    const stem = sentence.replace(term,"_____");
+    const options = shuffle([term, ...shuffle(terms).slice(1,4)]);
+
+    questions.push({
+      type:"MCQ",
+      question:`اختر الكلمة المناسبة:\n${stem}`,
+      options:options,
+      answer:term
+    });
+  }
+
+  renderQuiz();
+}
+
+function renderQuiz(){
+  quizContainer.innerHTML = "";
+  questions.forEach((q,index)=>{
     const div = document.createElement("div");
-    div.innerHTML = `
-      <p>${index+1}) ${q.question}</p>
-      <label><input type="radio" name="q${index}" value="صح"> صح</label>
-      <label><input type="radio" name="q${index}" value="خطأ"> خطأ</label>
-      <hr>
-    `;
+    div.innerHTML = `<p>${index+1}) ${q.question}</p>`;
+
+    if(q.type==="TF"){
+      div.innerHTML += `
+        <label><input type="radio" name="q${index}" value="صح"> صح</label>
+        <label><input type="radio" name="q${index}" value="خطأ"> خطأ</label>
+      `;
+    }
+
+    if(q.type==="MCQ"){
+      q.options.forEach(opt=>{
+        div.innerHTML += `
+          <label><input type="radio" name="q${index}" value="${opt}"> ${opt}</label>
+        `;
+      });
+    }
+
+    div.innerHTML += "<hr>";
     quizContainer.appendChild(div);
   });
-};
+}
 
-gradeBtn.onclick = () => {
+gradeBtn.onclick = ()=>{
   let score = 0;
 
-  questions.forEach((q, index) => {
+  questions.forEach((q,index)=>{
     const selected = document.querySelector(`input[name="q${index}"]:checked`);
-    if (selected && selected.value === q.answer) {
+    if(selected && selected.value === q.answer){
       score++;
     }
   });
 
-  const finalScore = Math.round((score / questions.length) * 100);
+  const finalScore = Math.round((score/questions.length)*100);
   resultDiv.innerHTML = `<h3>علامتك: ${finalScore} / 100</h3>`;
 };
 
+generateBtn.onclick = generateQuiz;
+regenBtn.onclick = generateQuiz;
+
 </script>
+
+<br>
+<div style="margin-top:30px;text-align:center;opacity:0.6">
+Dev : Ahmad Shami
+</div>
 
 </body>
 </html>
